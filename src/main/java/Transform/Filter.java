@@ -23,7 +23,15 @@ public class Filter {
             public boolean filter(WaterSensor value) throws Exception {
                 return value.id.equals("s1");
             }
-        }).print();
+        })
+                //这个滤完之后还是一条数据流
+                .filter(new FilterFunction<WaterSensor>() {
+                            @Override
+                            public boolean filter(WaterSensor value) throws Exception {
+                                return value.vc.equals(1);
+                            }
+                        })
+                .print();
 
         env.execute();
     }
