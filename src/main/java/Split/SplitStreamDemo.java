@@ -4,6 +4,7 @@ package Split;
 import Aggregation.Reduce;
 import bean.WaterSensor;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
@@ -12,8 +13,8 @@ import org.apache.flink.util.OutputTag;
 
 public class SplitStreamDemo {
     public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        SingleOutputStreamOperator<WaterSensor> ds = env.socketTextStream("hadoop102", 7777)
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
+        SingleOutputStreamOperator<WaterSensor> ds = env.socketTextStream("127.0.0.1", 7777)
                 .map(new Reduce.WaterSensorFunction());
 
         OutputTag<WaterSensor> s1 = new OutputTag<>("s1", Types.POJO(WaterSensor.class));
