@@ -22,7 +22,9 @@ public class SplitStreamDemo {
 
         SingleOutputStreamOperator<WaterSensor> process = ds.process(new ProcessFunction<WaterSensor, WaterSensor>() {
             @Override
-            public void processElement(WaterSensor value, ProcessFunction<WaterSensor, WaterSensor>.Context ctx, Collector<WaterSensor> out) throws Exception {
+            public void processElement(WaterSensor value,
+                                       ProcessFunction<WaterSensor, WaterSensor>.Context ctx,
+                                       Collector<WaterSensor> out) throws Exception {
                 if ("s1".equals(value.id)) {
                     ctx.output(s1, value);
                 } else if ("s2".equals(value.id)) {
