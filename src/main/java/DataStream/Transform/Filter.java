@@ -1,11 +1,9 @@
-package Transform;
+package DataStream.Transform;
 
-import bean.WaterSensor;
+import Function.WaterSensor;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-
-import java.nio.file.Watchable;
 
 public class Filter {
     public static void main(String[] args) throws Exception {

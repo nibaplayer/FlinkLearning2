@@ -1,6 +1,6 @@
-package Aggregation;
+package DataStream.Aggregation;
 
-import bean.WaterSensor;
+import Function.WaterSensor;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;

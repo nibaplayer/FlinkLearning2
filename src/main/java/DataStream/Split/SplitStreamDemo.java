@@ -1,8 +1,8 @@
-package Split;
+package DataStream.Split;
 
 
-import Aggregation.Reduce;
-import bean.WaterSensor;
+import DataStream.Aggregation.Reduce;
+import Function.WaterSensor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
