@@ -8,4 +8,7 @@ public class KafkaSource {
 
 
     }
+
+    public static void builder() {
+    }
 }

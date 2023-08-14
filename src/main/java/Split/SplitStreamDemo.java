@@ -16,6 +16,7 @@ public class SplitStreamDemo {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
         SingleOutputStreamOperator<WaterSensor> ds = env.socketTextStream("127.0.0.1", 7777)
                 .map(new Reduce.WaterSensorFunction());
+        //map将流里的数据变为了自定义的数据类型
 
         OutputTag<WaterSensor> s1 = new OutputTag<>("s1", Types.POJO(WaterSensor.class));
         OutputTag<WaterSensor> s2 = new OutputTag<>("s2", Types.POJO(WaterSensor.class));

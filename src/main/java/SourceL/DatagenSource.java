@@ -17,10 +17,10 @@ public class DatagenSource {
                 new GeneratorFunction<Long, String>() {
                     @Override
                     public String map(Long value) throws Exception {
-                        return "Number:" + value;
+                        return "Number:" + String.valueOf(Math.random());
                     }
                 },
-                10000,
+                Long.MAX_VALUE,
                 RateLimiterStrategy.perSecond(10),
                 Types.STRING
         );
