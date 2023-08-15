@@ -14,11 +14,11 @@ public class generator {
             OutputStream outputStream = socket.getOutputStream();
             PrintStream printStream = new PrintStream(outputStream);
             while (true) {
-                int a = (int) (Math.random() * 3);//生成一个0，1，2范围内的随机数
+                int a = (int) (Math.random() * 10);//生成一个随机数
 
                 printStream.println("s" + a + "," + a + "," + a);
 
-                Thread.sleep(10);//每隔1秒发送一组数据
+                Thread.sleep(100);//每隔0.1秒发送一组数据
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);

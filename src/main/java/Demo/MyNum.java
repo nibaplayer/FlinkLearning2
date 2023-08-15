@@ -11,7 +11,7 @@ public class MyNum {
         this.count = count;
         this.value = value;
     }
-
+    //POJO要求有getter 与 setter
     public Long getCount() {
         return count;
     }

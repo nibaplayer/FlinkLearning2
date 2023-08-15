@@ -18,7 +18,7 @@ import java.nio.channels.NotYetBoundException;
 public class Windows {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
-        //env.setParallelism(21);
+        env.setParallelism(1);
         //这个生成器在不同的并行算子中 10000会被拆分
         DataGeneratorSource<MyNum> dataGeneratorSource = new DataGeneratorSource<>(
                 new GeneratorFunction<Long, MyNum>() {
@@ -28,9 +28,9 @@ public class Windows {
                     }
                 },
                 Long.MAX_VALUE,
-                RateLimiterStrategy.perSecond(4),
+                RateLimiterStrategy.perSecond(100),
                 Types.POJO(MyNum.class)
-                //POJO要求有getter 与 setter
+
         );
 
         DataStreamSource<MyNum> ds = env.fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-generator");
@@ -61,7 +61,7 @@ public class Windows {
                 return null;
             }
         });
-
+        //开一个容量为2的窗口   二合一
         SingleOutputStreamOperator<MyNum> aggregate1 = aggregate.countWindowAll(2).aggregate(new AggregateFunction<MyNum, MyNum, MyNum>() {
             @Override
             public MyNum createAccumulator() {
@@ -94,6 +94,7 @@ public class Windows {
                 value.myprint();
             }
         });
+
 
         env.execute();
     }

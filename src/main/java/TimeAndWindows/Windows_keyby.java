@@ -28,20 +28,20 @@ public class Windows_keyby {
                 Long.MAX_VALUE,
                 RateLimiterStrategy.perSecond(100),
                 Types.POJO(MyNum.class)
-                //POJO要求有getter 与 setter
+
         );
 
         DataStreamSource<MyNum> ds = env.fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-generator");
-        KeyedStream<MyNum, Long> KB = ds.keyBy(new KeySelector<MyNum, Long>() {//给每个mynum配一个随机的键值   这样他们会给随机的分到不同的分区
+        KeyedStream<MyNum, Integer> KB = ds.keyBy(new KeySelector<MyNum, Integer>() {//给每个mynum配一个随机的键值   这样他们会给随机的分到不同的分区
             @Override
-            public Long getKey(MyNum value) throws Exception {
-                return (long) ( 24* Math.random());
+            public Integer getKey(MyNum value) throws Exception {
+                return Integer.valueOf((int) (24* value.getValue()));
             }
         });
         KB.addSink(new SinkFunction<MyNum>() {
             @Override
             public void invoke(MyNum value, Context context) throws Exception {
-
+                SinkFunction.super.invoke(value, context);
                 value.myprint();
             }
         });
