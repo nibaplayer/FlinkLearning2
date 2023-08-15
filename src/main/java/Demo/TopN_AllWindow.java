@@ -11,6 +11,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction;
@@ -31,15 +32,34 @@ public class TopN_AllWindow {
         env.setParallelism(1);
 
 
+//        SingleOutputStreamOperator<WaterSensor> sensorDS = env
+//                .socketTextStream("127.0.0.1", 7777)
+//
+//                .map(new WaterSensorMapFunction())
+//                .assignTimestampsAndWatermarks(
+//                        WatermarkStrategy
+//                                .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
+//                                .withTimestampAssigner((element, ts) -> element.getTs() * 1000L)
+//                );
+
+        DataGeneratorSource<WaterSensor>   dataGeneratorSource = new DataGeneratorSource<>(
+                new GeneratorFunction<Long, WaterSensor>() {
+                    @Override
+                    public WaterSensor map(Long value) throws Exception {
+                        return new WaterSensor("s"+10*(int)Math.random(),(long)10*(long)Math.random(),10*(int)Math.random());
+                    }
+                },
+                Long.MAX_VALUE,
+                RateLimiterStrategy.perSecond(10),
+                Types.POJO(WaterSensor.class)
+        );
         SingleOutputStreamOperator<WaterSensor> sensorDS = env
-                .socketTextStream("127.0.0.1", 7777)
-                .map(new WaterSensorMapFunction())
+                .fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-source")
                 .assignTimestampsAndWatermarks(
                         WatermarkStrategy
                                 .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
                                 .withTimestampAssigner((element, ts) -> element.getTs() * 1000L)
                 );
-
 
         // 最近10秒= 窗口长度， 每5秒输出 = 滑动步长
         // TODO 思路一： 所有数据到一起， 用hashmap存， key=vc，value=count值
