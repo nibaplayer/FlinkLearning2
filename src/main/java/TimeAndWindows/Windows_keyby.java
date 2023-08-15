@@ -17,7 +17,7 @@ public class Windows_keyby {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
         //env.setParallelism(21);
-        //这个生成器在不同的并行子任务中 10000会被拆分
+
         DataGeneratorSource<MyNum> dataGeneratorSource = new DataGeneratorSource<>(
                 new GeneratorFunction<Long, MyNum>() {
                     @Override
@@ -26,7 +26,7 @@ public class Windows_keyby {
                     }
                 },
                 Long.MAX_VALUE,
-                RateLimiterStrategy.perSecond(100),
+                RateLimiterStrategy.perSecond(20),
                 Types.POJO(MyNum.class)
 
         );
@@ -38,13 +38,15 @@ public class Windows_keyby {
                 return Integer.valueOf((int) (24* value.getValue()));
             }
         });
+
         KB.addSink(new SinkFunction<MyNum>() {
             @Override
             public void invoke(MyNum value, Context context) throws Exception {
                 SinkFunction.super.invoke(value, context);
+
                 value.myprint();
             }
-        });
+        }).setParallelism(3);
 
         env.execute();
     }
