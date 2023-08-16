@@ -46,11 +46,11 @@ public class TopN_AllWindow {
                 new GeneratorFunction<Long, WaterSensor>() {
                     @Override
                     public WaterSensor map(Long value) throws Exception {
-                        return new WaterSensor("s"+10*(int)Math.random(),(long)10*(long)Math.random(),10*(int)Math.random());
+                        return new WaterSensor("s"+(int)(10*Math.random()), System.currentTimeMillis(),(int)(10*Math.random()));
                     }
                 },
                 Long.MAX_VALUE,
-                RateLimiterStrategy.perSecond(10),
+                RateLimiterStrategy.perSecond(20),
                 Types.POJO(WaterSensor.class)
         );
         SingleOutputStreamOperator<WaterSensor> sensorDS = env
@@ -58,12 +58,13 @@ public class TopN_AllWindow {
                 .assignTimestampsAndWatermarks(
                         WatermarkStrategy
                                 .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
-                                .withTimestampAssigner((element, ts) -> element.getTs() * 1000L)
+                                .withTimestampAssigner((element, ts) -> element.getTs())
                 );
 
         // 最近10秒= 窗口长度， 每5秒输出 = 滑动步长
         // TODO 思路一： 所有数据到一起， 用hashmap存， key=vc，value=count值
         sensorDS.windowAll(SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5)))
+                //10s窗口容量  5s滚动窗口 每5秒输出前10秒中出现次数最多的
                 .process(new MyTopNPAWF())
                 .print();
 
