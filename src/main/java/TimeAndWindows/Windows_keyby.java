@@ -11,7 +11,9 @@ import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.apache.flink.util.Collector;
 
 public class Windows_keyby {
     public static void main(String[] args) throws Exception {
@@ -39,14 +41,28 @@ public class Windows_keyby {
             }
         });
 
-        KB.addSink(new SinkFunction<MyNum>() {
-            @Override
-            public void invoke(MyNum value, Context context) throws Exception {
-                SinkFunction.super.invoke(value, context);
+//        KB.addSink(new SinkFunction<MyNum>() {
+//            @Override
+//            public void invoke(MyNum value, Context context) throws Exception {
+//                SinkFunction.super.invoke(value, context);
+//
+//                value.myprint();
+//            }
+//        }).setParallelism(3);
+        KB.process(
+                new ProcessFunction<MyNum, String>() {
+                    @Override
+                    public void processElement(MyNum value, ProcessFunction<MyNum, String>.Context ctx, Collector<String> out) throws Exception {
+                        StringBuilder outstr = new StringBuilder();
+                        outstr.append(value.toString()+"\n");
+                        out.collect(outstr.toString());
+                    }
+                }
+        )
 
-                value.myprint();
-            }
-        }).setParallelism(3);
+                .print().setParallelism(3);
+
+
 
         env.execute();
     }

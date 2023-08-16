@@ -31,4 +31,12 @@ public class MyNum {
     public void myprint(){
         System.out.println("("+count+","+value+")");
     }
+
+    @Override
+    public String toString() {
+        return "MyNum{" +
+                "count=" + count +
+                ", value=" + value +
+                '}';
+    }
 }

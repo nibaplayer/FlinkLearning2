@@ -2,10 +2,15 @@ package Demo;
 
 import Function.WaterSensor;
 import Function.WaterSensorMapFunction;
+import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.AggregateFunction;
+import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.connector.datagen.source.DataGeneratorSource;
+import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
@@ -21,16 +26,34 @@ import java.util.*;
 public class TopN_KeyedWindows {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
-        env.setParallelism(1);
+        //env.setParallelism(1);
 
 
+//        SingleOutputStreamOperator<WaterSensor> sensorDS = env
+//                .socketTextStream("127.0.0.1", 7777)
+//                .map(new WaterSensorMapFunction())
+//                .assignTimestampsAndWatermarks(
+//                        WatermarkStrategy
+//                                .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
+//                                .withTimestampAssigner((element, ts) -> element.getTs() * 1000L)
+//                );
+        DataGeneratorSource<WaterSensor> dataGeneratorSource = new DataGeneratorSource<>(
+                new GeneratorFunction<Long, WaterSensor>() {
+                    @Override
+                    public WaterSensor map(Long value) throws Exception {
+                        return new WaterSensor("s"+(int)(10*Math.random()), System.currentTimeMillis(),(int)(10*Math.random()));
+                    }
+                },
+                Long.MAX_VALUE,
+                RateLimiterStrategy.perSecond(20),
+                Types.POJO(WaterSensor.class)
+        );
         SingleOutputStreamOperator<WaterSensor> sensorDS = env
-                .socketTextStream("127.0.0.1", 7777)
-                .map(new WaterSensorMapFunction())
+                .fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-source")
                 .assignTimestampsAndWatermarks(
                         WatermarkStrategy
                                 .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
-                                .withTimestampAssigner((element, ts) -> element.getTs() * 1000L)
+                                .withTimestampAssigner((element, ts) -> element.getTs())
                 );
 
 
@@ -41,6 +64,7 @@ public class TopN_KeyedWindows {
          *    ==》 增量聚合，计算 count
          *    ==》 全窗口，对计算结果 count值封装 ，  带上 窗口结束时间的 标签
          *          ==》 为了让同一个窗口时间范围的计算结果到一起去
+         *
          *
          * 2、对同一个窗口范围的count值进行处理： 排序、取前N个
          *    =》 按照 windowEnd做keyby
@@ -55,7 +79,7 @@ public class TopN_KeyedWindows {
                 .aggregate(
                         new VcCountAgg(),
                         new WindowResult()
-                );
+                );//聚合后会变成普通的流
 
 
         // 2. 按照窗口标签（窗口结束时间）keyby，保证同一个窗口时间范围的结果，到一起去。排序、取TopN
@@ -108,7 +132,6 @@ public class TopN_KeyedWindows {
             long windowEnd = context.window().getEnd();
             out.collect(Tuple3.of(key, count, windowEnd));
         }
-
     }
 
 
@@ -165,14 +188,16 @@ public class TopN_KeyedWindows {
             // 2. 取TopN
             StringBuilder outStr = new StringBuilder();
 
-            outStr.append("================================\n");
+            outStr.append("\n================================\n");
             // 遍历 排序后的 List，取出前 threshold 个， 考虑可能List不够2个的情况  ==》 List中元素的个数 和 2 取最小值
             for (int i = 0; i < Math.min(threshold, dataList.size()); i++) {
                 Tuple3<Integer, Integer, Long> vcCount = dataList.get(i);
                 outStr.append("Top" + (i + 1) + "\n");
                 outStr.append("vc=" + vcCount.f0 + "\n");
                 outStr.append("count=" + vcCount.f1 + "\n");
-                outStr.append("窗口结束时间=" + vcCount.f2 + "\n");
+                outStr.append("窗口结束时间=" + DateFormatUtils.format(vcCount.f2, "yyyy-MM-dd HH:mm:ss.SSS") + "\n");
+
+                //outStr.append("窗口结束时间=" + vcCount.f2 + "\n");
                 outStr.append("================================\n");
             }
 
