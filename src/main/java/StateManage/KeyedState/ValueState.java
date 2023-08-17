@@ -1,4 +1,4 @@
-package StateManage;
+package StateManage.KeyedState;
 
 import Function.WaterSensor;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -41,6 +41,8 @@ public class ValueState {
                 .process(
                         new KeyedProcessFunction<String, WaterSensor, String>() {
                             org.apache.flink.api.common.state.ValueState<Integer> lastVcState;
+                            //除了valuestate 还有 liststate  mapstate  reducingstate  aggregatingstate
+
                             @Override
                             public void open(Configuration parameters) throws Exception {//初始化状态
 
