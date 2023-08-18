@@ -25,7 +25,7 @@ import java.util.*;
 
 public class TopN_KeyedWindows {
     public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         //env.setParallelism(1);
 
 

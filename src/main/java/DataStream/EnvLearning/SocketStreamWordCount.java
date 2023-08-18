@@ -16,7 +16,7 @@ public class SocketStreamWordCount {
     public static void main(String[] args) throws Exception {
 
         // 1. 创建流式执行环境
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // 2. 读取文本流：hadoop102表示发送端主机名、7777表示端口号
         DataStreamSource<String> lineStream = env.socketTextStream("hadoop102", 7777);
 
