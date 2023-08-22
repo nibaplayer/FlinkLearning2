@@ -2,7 +2,6 @@ package Demo;
 
 import Function.WaterSensor;
 import Function.WaterSensorMapFunction;
-import com.codahale.metrics.Slf4jReporter;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.AggregateFunction;
@@ -24,21 +23,20 @@ import org.apache.flink.util.Collector;
 import java.time.Duration;
 import java.util.*;
 
-public class TopN_KeyedWindows {
+public class TopN_KeyedWindows_socketsource {
     public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
         //env.setParallelism(1);
-        Slf4jReporter slf4jReporter ;
 
 
-        SingleOutputStreamOperator<WaterSensor> sensorDS = env
-                .socketTextStream("hadoop102", 7777)
-                .map(new WaterSensorMapFunction())
-                .assignTimestampsAndWatermarks(
-                        WatermarkStrategy
-                                .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
-                                .withTimestampAssigner((element, ts) -> element.getTs())
-                );
+//        SingleOutputStreamOperator<WaterSensor> sensorDS = env
+//                .socketTextStream("127.0.0.1", 7777)
+//                .map(new WaterSensorMapFunction())
+//                .assignTimestampsAndWatermarks(
+//                        WatermarkStrategy
+//                                .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
+//                                .withTimestampAssigner((element, ts) -> element.getTs() * 1000L)
+//                );
 //        DataGeneratorSource<WaterSensor> dataGeneratorSource = new DataGeneratorSource<>(
 //                new GeneratorFunction<Long, WaterSensor>() {
 //                    @Override
@@ -51,17 +49,24 @@ public class TopN_KeyedWindows {
 //                Types.POJO(WaterSensor.class)
 //        );
 
-//        //datageneratorsource 似乎在实际部署中不能有多个datageneratorsorce
-//
-//        SingleOutputStreamOperator<WaterSensor> sensorDS = env
-//                .fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-source")
-//                .assignTimestampsAndWatermarks(
-//                        WatermarkStrategy
-//                                .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
-//                                .withTimestampAssigner((element, ts) -> element.getTs())
-//                );
+        //datageneratorsource 似乎在实际部署中不能有多个datageneratorsorce
 
-
+        env.socketTextStream("127.0.0.1",7777)
+                .map(new WaterSensorMapFunction())
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
+                                .withTimestampAssigner((element, ts) -> element.getTs())
+                )
+                .keyBy(sensor -> sensor.getVc())
+                .window(SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5)))
+                .aggregate(
+                        new VcCountAgg(),
+                        new WindowResult()
+                )
+                .keyBy(r -> r.f2)
+                .process(new TopN(2))
+                .print();
         // 最近10秒= 窗口长度， 每5秒输出 = 滑动步长
         /**
          * TODO 思路二： 使用 KeyedProcessFunction实现
@@ -79,19 +84,9 @@ public class TopN_KeyedWindows {
 
         // 1. 按照 vc 分组、开窗、聚合（增量计算+全量打标签）
         //  开窗聚合后，就是普通的流，没有了窗口信息，需要自己打上窗口的标记 windowEnd
-        SingleOutputStreamOperator<Tuple3<Integer, Integer, Long>> windowAgg = sensorDS.keyBy(sensor -> sensor.getVc())
-                .window(SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5)))
-                .aggregate(
-                        new VcCountAgg(),
-                        new WindowResult()
-                );//聚合后会变成普通的流
 
 
         // 2. 按照窗口标签（窗口结束时间）keyby，保证同一个窗口时间范围的结果，到一起去。排序、取TopN
-        windowAgg.keyBy(r -> r.f2)
-                .process(new TopN(2))
-                .print();
-
 
         env.execute();
     }

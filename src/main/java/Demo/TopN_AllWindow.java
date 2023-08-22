@@ -29,7 +29,7 @@ import java.util.List;
 public class TopN_AllWindow {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
-        env.setParallelism(1);
+        //env.setParallelism(1);
 
 
 //        SingleOutputStreamOperator<WaterSensor> sensorDS = env
