@@ -24,10 +24,10 @@ import java.time.Duration;
 public class Windows_keyby {
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        conf.set(MetricOptions.REPORTERS_LIST,"stsd")
-                .set(MetricOptions.REPORTER_INTERVAL, Duration.ofSeconds(10))
-                .set(MetricOptions.REPORTER_FACTORY_CLASS,"TimeAndWindows.Windows_keyby")
-                .set(MetricOptions.QUERY_SERVICE_PORT,"8125");
+//        conf.set(MetricOptions.REPORTERS_LIST,"stsd")
+//                .set(MetricOptions.REPORTER_INTERVAL, Duration.ofSeconds(10))
+//                .set(MetricOptions.REPORTER_FACTORY_CLASS,"TimeAndWindows.Windows_keyby")
+//                .set(MetricOptions.QUERY_SERVICE_PORT,"8125");
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
         //env.setParallelism(21);

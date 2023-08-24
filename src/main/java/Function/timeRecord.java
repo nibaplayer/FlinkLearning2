@@ -17,9 +17,47 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
-public class demo {
-    public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
+import java.io.FileWriter;
+import java.io.IOException;
+
+public class timeRecord {
+    public static void main(String[] args) throws IOException {
+        FileWriter fw = new FileWriter("Results.txt",true);
+        int count=10;//进行几轮
+        fw.write("窗口大小\t");
+        for(int i=1;i<=count;i++){
+            fw.write("第"+i+"轮\t");
+        }
+        fw.write("均值\t\n");
+        //fw.write("窗口大小\t第一轮\t第二轮\t第三轮\t第四轮\t第五轮\t均值\t\n");
+        //fw.flush();
+
+        for(int i: new int[]{1,2,5,10,20, 50, 100,200,500,1000,2000,5000,10000,20000,50000,100000}){//窗口从1-100000
+            fw.write((i)+"\t\t");
+            Long total= 0L;
+            for(int j=1;j<=count;j++){
+                //每个跑5轮
+                Long record = System.currentTimeMillis();
+                try {
+                    WindowsProcess(i);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }finally {
+                    Long interval = System.currentTimeMillis()-record;
+                    total+=interval;
+                    fw.write((interval)+"\t");
+                    System.out.println("窗口大小"+i+"第"+j+"轮Result:"+(interval));
+                }
+            }
+            fw.write((Math.round(total*1.0/count))+"\t\n");
+            System.out.println("窗口大小"+i+"平均Result:"+(Math.round(total/5.0)));
+            fw.flush();
+        }
+        fw.close();
+    }
+
+    public static void WindowsProcess(int windows) throws Exception {
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(2);
         DataGeneratorSource<MyNum> dataGeneratorSource = new DataGeneratorSource<>(
                 new GeneratorFunction<Long, MyNum>() {
@@ -28,7 +66,7 @@ public class demo {
                         return new MyNum(1L,Math.random());
                     }
                 },
-                Long.MAX_VALUE,//生成10亿个数
+                1000000000L,//生成10亿个数
                 RateLimiterStrategy.noOp(),
                 Types.POJO(MyNum.class)
         );
@@ -40,7 +78,7 @@ public class demo {
                         return 0;
                     }
                 })
-                .countWindow(10)
+                .countWindow(windows)//窗口大小
                 .aggregate(new AggregateFunction<MyNum, MyNum, MyNum>() {
                     @Override
                     public MyNum createAccumulator() {
@@ -62,13 +100,12 @@ public class demo {
                         return null;
                     }
                 });//十合一
-        //KB.slotSharingGroup()
         KB.keyBy(new KeySelector<MyNum, Integer>() {
             @Override
             public Integer getKey(MyNum value) throws Exception {
                 return 1;
             }
-        }).process(new KeyedProcessFunction<Integer, MyNum, MyNum>() {
+        }).process(new KeyedProcessFunction<Integer, MyNum, String>() {
             ValueState<MyNum> sumState;
             @Override
             public void open(Configuration parameters) throws Exception {
@@ -78,7 +115,7 @@ public class demo {
             }
 
             @Override
-            public void processElement(MyNum value, KeyedProcessFunction<Integer, MyNum, MyNum>.Context ctx, Collector<MyNum> out) throws Exception {
+            public void processElement(MyNum value, KeyedProcessFunction<Integer, MyNum, String>.Context ctx, Collector<String> out) throws Exception {
                 if(sumState.value()==null){
                     // 先初始化
                     sumState.update(new MyNum(0L,0.0));
@@ -87,14 +124,15 @@ public class demo {
                 temp.setCount(temp.getCount()+value.getCount());
                 temp.setValue(temp.getValue()+ value.getValue());
                 sumState.update(temp);
-                if(temp.getCount()%1000000L==0L){
-                    //每100万输出一个
-                    out.collect(temp);
+                if(temp.getCount()%1000000000L==0L){
+                    //输出一个
+                    out.collect("end of this turn!\nresult:"+temp.toString());
+
                 }
             }
         }).print();
 
         env.execute();
-
     }
 }
+
