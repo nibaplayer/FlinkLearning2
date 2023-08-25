@@ -1,7 +1,5 @@
-package Demo;
+package Function;
 
-import Function.WaterSensor;
-import Function.WaterSensorMapFunction;
 import com.codahale.metrics.Slf4jReporter;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -24,21 +22,12 @@ import org.apache.flink.util.Collector;
 import java.time.Duration;
 import java.util.*;
 
-public class TopN_KeyedWindows {
+public class KeyedWindows_timewindow {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
-        //env.setParallelism(1);
-        //Slf4jReporter slf4jReporter ;
 
 
-//        SingleOutputStreamOperator<WaterSensor> sensorDS = env
-//                .socketTextStream("hadoop102", 7777)
-//                .map(new WaterSensorMapFunction())
-//                .assignTimestampsAndWatermarks(
-//                        WatermarkStrategy
-//                                .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
-//                                .withTimestampAssigner((element, ts) -> element.getTs())
-//                );
+
         DataGeneratorSource<WaterSensor> dataGeneratorSource = new DataGeneratorSource<>(
                 new GeneratorFunction<Long, WaterSensor>() {
                     @Override
@@ -51,31 +40,19 @@ public class TopN_KeyedWindows {
                 Types.POJO(WaterSensor.class)
         );
 
-        //datageneratorsource 似乎在实际部署中不能有多个datageneratorsorce
-
+//        //datageneratorsource 似乎在实际部署中不能有多个datageneratorsorce
+//
         SingleOutputStreamOperator<WaterSensor> sensorDS = env
                 .fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-source")
                 .assignTimestampsAndWatermarks(
                         WatermarkStrategy
                                 .<WaterSensor>forBoundedOutOfOrderness(Duration.ofSeconds(3))
                                 .withTimestampAssigner((element, ts) -> element.getTs())
-                );
+                )
+                .setParallelism(3);
 
 
         // 最近10秒= 窗口长度， 每5秒输出 = 滑动步长
-        /**
-         * TODO 思路二： 使用 KeyedProcessFunction实现
-         * 1、按照vc做keyby，开窗，分别count
-         *    ==》 增量聚合，计算 count
-         *    ==》 全窗口，对计算结果 count值封装 ，  带上 窗口结束时间的 标签
-         *          ==》 为了让同一个窗口时间范围的计算结果到一起去
-         *
-         *
-         * 2、对同一个窗口范围的count值进行处理： 排序、取前N个
-         *    =》 按照 windowEnd做keyby
-         *    =》 使用process， 来一条调用一次，需要先存，分开存，用HashMap,key=windowEnd,value=List
-         *      =》 使用定时器，对 存起来的结果 进行 排序、取前N个
-         */
 
         // 1. 按照 vc 分组、开窗、聚合（增量计算+全量打标签）
         //  开窗聚合后，就是普通的流，没有了窗口信息，需要自己打上窗口的标记 windowEnd

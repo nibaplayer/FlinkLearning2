@@ -1,6 +1,6 @@
 package Demo;
 
-import org.apache.flink.FlinkVersion;
+import Function.MyNum;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.common.typeinfo.Types;

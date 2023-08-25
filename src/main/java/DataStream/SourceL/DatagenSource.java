@@ -1,6 +1,6 @@
 package DataStream.SourceL;
 
-import Demo.MyNum;
+import Function.MyNum;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;

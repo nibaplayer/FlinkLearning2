@@ -14,7 +14,7 @@ public class CollectionDemo {
         List<Integer> data = Arrays.asList(1,22,3);
 
         DataStreamSource<Integer> ds = env.fromCollection(data);
-
+        //env.socketTextStream()
         ds.print();
 
         env.execute();

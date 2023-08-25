@@ -1,6 +1,5 @@
 package Function;
 
-import Demo.MyNum;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.state.ValueState;
@@ -11,14 +10,16 @@ import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.util.Collector;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.Duration;
 
 public class timeRecord {
     public static void main(String[] args) throws IOException {
@@ -32,11 +33,11 @@ public class timeRecord {
         //fw.write("窗口大小\t第一轮\t第二轮\t第三轮\t第四轮\t第五轮\t均值\t\n");
         //fw.flush();
 
-        for(int i: new int[]{1,2,5,10,20, 50, 100,200,500,1000,2000,5000,10000,20000,50000,100000}){//窗口从1-100000
+        for(int i: new int[]{1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000}){//窗口从1-100000
             fw.write((i)+"\t\t");
             Long total= 0L;
             for(int j=1;j<=count;j++){
-                //每个跑5轮
+                //每个跑count轮
                 Long record = System.currentTimeMillis();
                 try {
                     WindowsProcess(i);
@@ -50,7 +51,7 @@ public class timeRecord {
                 }
             }
             fw.write((Math.round(total*1.0/count))+"\t\n");
-            System.out.println("窗口大小"+i+"平均Result:"+(Math.round(total/5.0)));
+            System.out.println("窗口大小"+i+"平均Result:"+(Math.round(total/count)));
             fw.flush();
         }
         fw.close();
@@ -58,27 +59,35 @@ public class timeRecord {
 
     public static void WindowsProcess(int windows) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(2);
+        //env.setParallelism(1);
         DataGeneratorSource<MyNum> dataGeneratorSource = new DataGeneratorSource<>(
                 new GeneratorFunction<Long, MyNum>() {
                     @Override
                     public MyNum map(Long value) throws Exception {
-                        return new MyNum(1L,Math.random());
+                        return new MyNum(1L,Math.random(),System.currentTimeMillis());
                     }
                 },
-                1000000000L,//生成10亿个数
+                100000000L,//生成1亿个数
                 RateLimiterStrategy.noOp(),
                 Types.POJO(MyNum.class)
         );
 
-        DataStreamSource<MyNum> ds = env.fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-generator");
+        SingleOutputStreamOperator<MyNum> ds = env
+                .fromSource(dataGeneratorSource, WatermarkStrategy.noWatermarks(), "data-generator")
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<MyNum>forBoundedOutOfOrderness(Duration.ofSeconds(3))
+                                .withTimestampAssigner((element, ts) -> element.getTs())
+                )
+                .setParallelism(3);
         SingleOutputStreamOperator<MyNum> KB = ds.keyBy(new KeySelector<MyNum, Integer>() {//给每个mynum配一个随机的键值   这样他们会给随机的分到不同的分区
                     @Override
                     public Integer getKey(MyNum value) throws Exception {
-                        return 0;
+                        return (int)(Math.random()*3);
                     }
                 })
-                .countWindow(windows)//窗口大小
+                .window(TumblingProcessingTimeWindows.of(Time.seconds(windows)))
+                //这个窗也是作用在全局的  导致这步算子并行度变为1
                 .aggregate(new AggregateFunction<MyNum, MyNum, MyNum>() {
                     @Override
                     public MyNum createAccumulator() {
@@ -97,9 +106,9 @@ public class timeRecord {
 
                     @Override
                     public MyNum merge(MyNum a, MyNum b) {
-                        return null;
+                        return new MyNum(a.getCount()+b.getCount(),a.getValue()+b.getValue());
                     }
-                });//十合一
+                });//聚合
         KB.keyBy(new KeySelector<MyNum, Integer>() {
             @Override
             public Integer getKey(MyNum value) throws Exception {
@@ -124,13 +133,13 @@ public class timeRecord {
                 temp.setCount(temp.getCount()+value.getCount());
                 temp.setValue(temp.getValue()+ value.getValue());
                 sumState.update(temp);
-                if(temp.getCount()%1000000000L==0L){
-                    //输出一个
-                    out.collect("end of this turn!\nresult:"+temp.toString());
-
-                }
+//                if(temp.getCount()%1000000000L==0L){
+//                    //输出一个
+//                    out.collect("end of this turn!\nresult:"+temp.toString());
+//
+//                }
             }
-        }).print();
+        });
 
         env.execute();
     }
