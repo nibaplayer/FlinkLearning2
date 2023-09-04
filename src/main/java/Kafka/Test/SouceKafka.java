@@ -1,4 +1,4 @@
-package Kafka;
+package Kafka.Test;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
@@ -13,8 +13,8 @@ public class SouceKafka {
         env.setParallelism(1);
 
         KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
-                .setBootstrapServers("hadoop102:9092,hadoop103:9092,hadoop104:9092")
-                .setTopics("first")
+                .setBootstrapServers("hadoop102:9092")
+                .setTopics("quickstart")
                 //.setGroupId("atguigu")
                 .setStartingOffsets(OffsetsInitializer.latest())
                 .setValueOnlyDeserializer(new SimpleStringSchema())

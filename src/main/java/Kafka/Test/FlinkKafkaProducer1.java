@@ -1,4 +1,4 @@
-package Kafka;
+package Kafka.Test;
 
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -16,6 +16,7 @@ public class FlinkKafkaProducer1 {
         ArrayList<String> wordlist =new ArrayList<>();
         wordlist.add("hello");
         wordlist.add("world");
+        wordlist.add("det");
 
         DataStreamSource<String> dataStreamSource = env.fromCollection(wordlist);
 
@@ -24,7 +25,7 @@ public class FlinkKafkaProducer1 {
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,"hadoop102:9092");
         //创建Flink下的kafka生产者
         FlinkKafkaProducer<String> kafkaProducer = new FlinkKafkaProducer<>(
-                "first",
+                "quickstart",
                 new SimpleStringSchema(),//序列化方式
                 properties
         );
